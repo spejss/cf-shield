@@ -2,7 +2,8 @@ from __future__ import print_function
 import json, urllib2, urllib, boto3, os, json
 from botocore.exceptions import ClientError
 
-slackurl="https://hooks.slack.com/services/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"
+#slackurl="https://hooks.slack.com/services/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"
+slackurl = os.environ['slack_url']
 SG_LIST = list()
 SG_LIST.append(os.environ['sg_shield_1'])
 SG_LIST.append(os.environ['sg_shield_2'])
@@ -62,7 +63,8 @@ def sg_apply(SG, IP_LIST):
 
         if sg_call.authorize_ingress(IpPermissions=[authorize_dict]):
             print(len(IP_LIST),"CIDRs ADDED on", SG)
-            slackalert(slackmsg,"#infraops",slackurl)
+            if slackurl != False:
+                slackalert(slackmsg,"#infraops",slackurl)
         else:
             print("Fucking crises ingress add ERROR")
             
@@ -80,7 +82,8 @@ def lambda_handler(event, context):
 
     if new_ip_ranges > 50:
         if len(SG_LIST) <= 1:
-            slackalert("Houston :parrot_crazy:, we have a problem!!!\n We have more then 50 cidrs on aws ip-list, please add more security groups!!! ","#infraops",slackurl)
+            print("more then 50 cidrs")
+            #slackalert("Houston :parrot_crazy:, we have a problem!!!\n We have more then 50 cidrs on aws ip-list, please add more security groups!!! ","#infraops",slackurl)
             
         new_ip_ranges_chunked = chunk(new_ip_ranges,len(SG_LIST))
     else:

@@ -2,6 +2,11 @@
 # Lambda function 
 # 2 SGs 
 
+# Provider SNS topic 
+provider "aws" {
+  alias = "sns"
+}
+
 # IAM ROLE
 resource "aws_iam_role" "iamRoleForLambda" {
   count = "${var.create_role == "true" ? 1 : 0 }"
@@ -43,9 +48,10 @@ data "aws_iam_policy_document" "cfshield-iamPolicyDocument" {
     ]
 
     resources = [
-      "arn:aws:ec2:*:*:security-group/${aws_security_group.cfshield-sgAuto1.id}",
-      "arn:aws:ec2:*:*:security-group/${aws_security_group.cfshield-sgAuto2.id}",
+      "arn:aws:ec2:${var.region_name}:${data.aws_caller_identity.current.account_id}:security-group/*",
     ]
+
+    #"arn:aws:ec2:${var.region_name}:${data.aws_caller_identity.current.account_id}:security-group/${aws_security_group.cfshield-sgAuto2.id}",
   }
 }
 
@@ -61,28 +67,43 @@ resource "aws_iam_role_policy_attachment" "cfshield-rolePolicyAttach" {
   policy_arn = "${aws_iam_policy.cfshield-iamPolicy.arn}"
 }
 
-resource "aws_security_group" "cfshield-sgAuto1" {
-  name        = "cfshield-sgAuto1"
-  description = "cfshield-sgAuto1 auto update by lambda"
+# resource "aws_security_group" "cfshield-sgAuto1" {
+#   name        = "cfshield-sgAuto1"
+#   description = "cfshield-sgAuto1 auto update by lambda"
 
-  vpc_id = "${var.myvpc_id}"
+#   vpc_id = "${var.myvpc_id}"
+
+#   #vpc_id = "${var.myvpc_id? var.myvpc_id : data.aws_vpc.default.id }"
+#   egress {
+#     from_port   = 0
+#     to_port     = 0
+#     protocol    = "-1"
+#     cidr_blocks = ["0.0.0.0/0"]
+#   }
+# }
+
+# resource "aws_security_group" "cfshield-sgAuto2" {
+#   name        = "cfshield-sgAuto2"
+#   description = "cfshield-sgAuto2 auto update by lambda"
+
+#   vpc_id = "${var.myvpc_id}"
+
+#   # vpc_id = "${var.myvpc_id == "" ? data.aws_vpc.default.id : ""  }"
+#   egress {
+#     from_port   = 0
+#     to_port     = 0
+#     protocol    = "-1"
+#     cidr_blocks = ["0.0.0.0/0"]
+#   }
+# }
+
+resource "aws_security_group" "cfshield-sgAuto" {
+  name        = "cfshield-sgAuto-${count.index}"
+  description = "cfshield-sgAuto auto update by lambda"
+  count       = 2
+  vpc_id      = "${var.myvpc_id}"
 
   #vpc_id = "${var.myvpc_id? var.myvpc_id : data.aws_vpc.default.id }"
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-resource "aws_security_group" "cfshield-sgAuto2" {
-  name        = "cfshield-sgAuto2"
-  description = "cfshield-sgAuto2 auto update by lambda"
-
-  vpc_id = "${var.myvpc_id}"
-
-  # vpc_id = "${var.myvpc_id == "" ? data.aws_vpc.default.id : ""  }"
   egress {
     from_port   = 0
     to_port     = 0
@@ -99,7 +120,7 @@ data "archive_file" "lambda_zip" {
 
 # Create Lambda
 resource "aws_lambda_function" "cfshield-lambdaFunc" {
-  filename      = "${data.archive_file.lambda_zip.output_path}"
+  filename      = "${path.module}/lambda.zip"
   function_name = "${var.func_name}"
   role          = "${aws_iam_role.iamRoleForLambda.arn}"
 
@@ -110,15 +131,33 @@ resource "aws_lambda_function" "cfshield-lambdaFunc" {
 
   environment {
     variables = {
-      sg_shield_1 = "${aws_security_group.cfshield-sgAuto1.id}"
-      sg_shield_2 = "${aws_security_group.cfshield-sgAuto2.id}"
+      sg_shield_1 = "${aws_security_group.cfshield-sgAuto.0.id}"
+      sg_shield_2 = "${aws_security_group.cfshield-sgAuto.1.id}"
       REGION_NAME = "${var.region_name}"
+      slack_url   = "${var.slack_url}"
     }
   }
 }
 
 # subscribe sns topic ipspace
-# slack things
-# Create Cloudwatch Events / Rules 
+
+resource "aws_sns_topic_subscription" "cfshield-ipSpaceChanged_Provider" {
+  count     = "${var.region_name != "us-east-1" ? 1 : 0}"
+  provider  = "aws.sns"
+  topic_arn = "${var.sns-topic}"
+  protocol  = "lambda"
+  endpoint  = "${aws_lambda_function.cfshield-lambdaFunc.arn}"
+}
+
+resource "aws_sns_topic_subscription" "cfshield-ipSpaceChanged" {
+  count     = "${var.region_name == "us-east-1" ? 1 : 0}"
+  topic_arn = "${var.sns-topic}"
+  protocol  = "lambda"
+  endpoint  = "${aws_lambda_function.cfshield-lambdaFunc.arn}"
+}
+
+# slack things X
+# Create Cloudwatch Events / Rules  
 # Attach SGs to CF or LB
+# pegar vpcid default
 
