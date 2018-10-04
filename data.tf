@@ -4,52 +4,34 @@ data "aws_vpc" "default" {
 
 data "aws_caller_identity" "current" {}
 
-# data "aws_subnet" "default" {
-#   vpc_id            = "${data.aws_vpc.default.id}"
-#   default_for_az    = true
-#   availability_zone = "${var.availability_zone}"
-# }
+data "aws_iam_policy_document" "cfshield-iamPolicyDocument" {
+  statement {
+    actions = [
+      "ec2:DescribeSecurityGroups",
+      "ec2:DescribeNetworkAcls",
+    ]
 
+    resources = [
+      "*",
+    ]
+  }
 
-# data "aws_subnet_ids" "all" {
-#   vpc_id = "${data.aws_vpc.vpc.id}"
-# }
+  statement {
+    actions = [
+      "ec2:AuthorizeSecurityGroupIngress",
+      "ec2:RevokeSecurityGroupIngress",
+    ]
 
+    resources = [
+      "arn:aws:ec2:${var.region_name}:${data.aws_caller_identity.current.account_id}:security-group/*",
+    ]
 
-# #################### VPC ###########################
-# data "aws_availability_zones" "available" {}
-# data "aws_vpc" "projectvpc" {
-#   tags {
-#     project = "${var.vpc_tag}"
-#   }
-# }
-# data "aws_subnet_ids" "projectsubnets" {
-#   vpc_id = "${data.aws_vpc.projectvpc.id}"
-# }
-# #################### IAM ###########################
-# data "aws_iam_role" "ecs_task" {
-#   name = "${var.cluster_project}-ecs-task-${var.env}"
-# }
-# data "aws_iam_role" "ecs_service" {
-#   name = "${var.cluster_project}-ecs-service-${var.env}"
-# }
-# ##################### ECS ###########################
-# data "aws_ecs_cluster" "cluster" {
-#   cluster_name = "${var.cluster_project}-${var.env}"
-# }
-# data "aws_ecr_repository" "repo" {
-#   name = "${var.cluster_project}-${var.env}"
-# }
-# ###################### LB ##########################
-# data "aws_lb" "lb" {
-#   name = "${var.cluster_project}-prod-${var.internal ? "int" : "ext"}"
-# }
-# data "aws_lb_listener" "aws_lb_listener_http" {
-#   load_balancer_arn = "${data.aws_lb.lb.arn}"
-#   port              = "${var.http_port}"
-# }
-# data "aws_lb_listener" "aws_lb_listener_https" {
-#   load_balancer_arn = "${data.aws_lb.lb.arn}"
-#   port              = "${var.https_port}"
-# }
+    #"arn:aws:ec2:${var.region_name}:${data.aws_caller_identity.current.account_id}:security-group/${aws_security_group.cfshield-sgAuto2.id}",
+  }
+}
 
+data "archive_file" "lambda_zip" {
+  type        = "zip"
+  source_file = "${path.module}/lambda.py"
+  output_path = "${path.module}/lambda.zip"
+}

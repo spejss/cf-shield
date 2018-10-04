@@ -2,12 +2,12 @@ from __future__ import print_function
 import json, urllib2, urllib, boto3, os, json
 from botocore.exceptions import ClientError
 
-#slackurl="https://hooks.slack.com/services/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"
 slackurl = os.environ['slack_url']
+slackurl = os.environ['slack_channel']
 SG_LIST = list()
 SG_LIST.append(os.environ['sg_shield_1'])
 SG_LIST.append(os.environ['sg_shield_2'])
-#print(SG_LIST)
+
 def chunk(xs, n):
     ''' Split the list, xs, into n chunks
         source: http://wordaligned.org/articles/slicing-a-list-evenly-with-python '''
@@ -63,7 +63,7 @@ def sg_apply(SG, IP_LIST):
 
         if sg_call.authorize_ingress(IpPermissions=[authorize_dict]):
             print(len(IP_LIST),"CIDRs ADDED on", SG)
-            if slackurl != False:
+            if slackurl != "disabled":
                 slackalert(slackmsg,"#infraops",slackurl)
         else:
             print("Fucking crises ingress add ERROR")
@@ -73,7 +73,6 @@ def sg_apply(SG, IP_LIST):
 
 def lambda_handler(event, context):
     print(SG_LIST)
-    #SG_LIST= ['sg-04f46bb6c7cf73ac6','sg-0e821da246e334e8f'] # Mock
     print("Loading data from https://ip-ranges.amazonaws.com/ip-ranges.json")
     response = urllib2.urlopen('https://ip-ranges.amazonaws.com/ip-ranges.json')
     json_data = json.loads(response.read())

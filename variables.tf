@@ -1,7 +1,11 @@
 variable "create_role" {}
 
 variable "myvpc_id" {
-  # default = "${data.aws_vpc.default.id}"
+  default = "False"
+}
+
+locals {
+  defvpc = "${data.aws_vpc.default.id}"
 }
 
 variable "region_name" {}
@@ -16,7 +20,8 @@ variable "sns-topic" {
 
 #variable "sns" {}
 
-variable "slack_url" {}
+variable "slack_url" {
+  default = "disabled"
+}
 
-# teste
-variable "lb" {}
+variable "slack_channel" {}
