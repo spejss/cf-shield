@@ -135,7 +135,7 @@ data "aws_subnet" "selected" {
 
 # Module
 module "hidemyoriginass" {
-  source        = "../cf-shield"
+  source        = "git::https://my-git-url/terraform-modules/cf-shield.git"
   create_role   = "true"
   region_name   = "${var.aws_region}"
   slack_url     = "https://hooks.slack.com/services/TTTTTTTT/AAAAAAAA/dfsV0eNASDdfaFDw2FSA"
