@@ -3,7 +3,7 @@ import json, urllib2, urllib, boto3, os, json
 from botocore.exceptions import ClientError
 
 slackurl = os.environ['slack_url']
-slackurl = os.environ['slack_channel']
+slackchannel = os.environ['slack_channel']
 SG_LIST = list()
 SG_LIST.append(os.environ['sg_shield_1'])
 SG_LIST.append(os.environ['sg_shield_2'])
@@ -20,7 +20,6 @@ def chunk(xs, n):
 
 
 def slackalert(message, channel, posturl):
-    http = urllib2
     url = posturl
     data = json.dumps({'text': message, 'channel': channel, 'username': 'lambda-exec' }).encode('utf-8')
 
@@ -47,7 +46,7 @@ def sg_apply(SG, IP_LIST):
             u'UserIdGroupPairs': []
         }
         authorize_dict = params_dict.copy()
-        slackmsg="Unfortunately, I had to do your job and change some rules on aws sg: " + SG
+        slackmsg="Unfortunately, I had to do your job and change some rules on security group: " + SG
         # Call boto ec2
         ec2 = boto3.resource('ec2',region_name=os.environ['REGION_NAME'])
         sg_call = ec2.SecurityGroup(SG)
@@ -64,7 +63,7 @@ def sg_apply(SG, IP_LIST):
         if sg_call.authorize_ingress(IpPermissions=[authorize_dict]):
             print(len(IP_LIST),"CIDRs ADDED on", SG)
             if slackurl != "disabled":
-                slackalert(slackmsg,"#infraops",slackurl)
+                slackalert(slackmsg,slackchannel,slackurl)
         else:
             print("Fucking crises ingress add ERROR")
             
@@ -73,17 +72,14 @@ def sg_apply(SG, IP_LIST):
 
 def lambda_handler(event, context):
     print(SG_LIST)
-    print("Loading data from https://ip-ranges.amazonaws.com/ip-ranges.json")
-    response = urllib2.urlopen('https://ip-ranges.amazonaws.com/ip-ranges.json')
+    IpSpaceURL="https://ip-ranges.amazonaws.com/ip-ranges.json"
+    print("Loading data from "+ IpSpaceURL )
+    response = urllib2.urlopen(IpSpaceURL)
     json_data = json.loads(response.read())
     new_ip_ranges = [ x['ip_prefix'] for x in json_data['prefixes'] if x['service'] == 'CLOUDFRONT' ]
     ipsize = len(new_ip_ranges)
 
-    if new_ip_ranges > 50:
-        if len(SG_LIST) <= 1:
-            print("more then 50 cidrs")
-            #slackalert("Houston :parrot_crazy:, we have a problem!!!\n We have more then 50 cidrs on aws ip-list, please add more security groups!!! ","#infraops",slackurl)
-            
+    if new_ip_ranges > 50:            
         new_ip_ranges_chunked = chunk(new_ip_ranges,len(SG_LIST))
     else:
         new_ip_ranges_chunked = new_ip_ranges

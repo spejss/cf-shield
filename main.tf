@@ -68,7 +68,6 @@ resource "aws_lambda_function" "cfshield-lambdaFunc" {
 }
 
 # subscribe sns topic ipspace
-
 resource "aws_sns_topic_subscription" "cfshield-ipSpaceChanged_Provider" {
   count     = "${var.region_name != "us-east-1" ? 1 : 0}"
   provider  = "aws.sns"
@@ -83,6 +82,3 @@ resource "aws_sns_topic_subscription" "cfshield-ipSpaceChanged" {
   protocol  = "lambda"
   endpoint  = "${aws_lambda_function.cfshield-lambdaFunc.arn}"
 }
-
-# pegar vpcid default
-
