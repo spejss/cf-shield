@@ -59,10 +59,11 @@ resource "aws_lambda_function" "cfshield-lambdaFunc" {
 
   environment {
     variables = {
-      sg_shield_1 = "${aws_security_group.cfshield-sgAuto.0.id}"
-      sg_shield_2 = "${aws_security_group.cfshield-sgAuto.1.id}"
-      REGION_NAME = "${var.region_name}"
-      slack_url   = "${var.slack_url}"
+      sg_shield_1   = "${aws_security_group.cfshield-sgAuto.0.id}"
+      sg_shield_2   = "${aws_security_group.cfshield-sgAuto.1.id}"
+      REGION_NAME   = "${var.region_name}"
+      slack_url     = "${var.slack_url}"
+      slack_channel = "${var.slack_channel}"
     }
   }
 }
