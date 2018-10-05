@@ -1,6 +1,6 @@
 # CloudFront Shield
 
-Protect your origin by adding security groups with CloudFront IPs.
+Protect your origin by adding security groups with CloudFront IPs always updated by lambda.
 
 ## How it works
 
@@ -17,7 +17,7 @@ This module create the follow resources:
 
 * func_name [ Optional ] <br>
   values = [a-Z]
-  
+
 * create_role [ Optional ] <br>
   values = true or false <br>
   if you alredy roles and policies to run lambda!
@@ -93,5 +93,71 @@ module "hidemyoriginass" {
   
   slack_url     = "https://hooks.slack.com/services/T00ASFASMM/MADSLKJFAS9/jgals9a90ue0020"
   slack_channel = "devops-haters"
+}
+```
+
+### Complete example
+```
+# Provider
+provider "aws" {
+  region  = "${var.aws_region}"
+  profile = "${var.aws_profile}"
+}
+
+provider "aws" {
+  alias   = "sns"
+  region  = "sa-east-1"
+  profile = "${var.aws_profile}"
+}
+
+# Variable
+variable "aws_profile" {
+  default = "myprofile"
+}
+
+variable "aws_region" {
+  default = "sa-east-1"
+}
+
+# Data
+data "aws_vpc" "selected" {
+  default = true
+}
+
+data "aws_subnet_ids" "selected" {
+  vpc_id = "${data.aws_vpc.selected.id}"
+}
+
+data "aws_subnet" "selected" {
+  count = "${length(data.aws_subnet_ids.selected.ids)}"
+  id    = "${data.aws_subnet_ids.selected.ids[count.index]}"
+}
+
+# Module
+module "hidemyoriginass" {
+  source        = "../cf-shield"
+  create_role   = "true"
+  region_name   = "${var.aws_region}"
+  slack_url     = "https://hooks.slack.com/services/TTTTTTTT/AAAAAAAA/dfsV0eNASDdfaFDw2FSA"
+  slack_channel = "devops-haters"
+
+  providers = {
+    aws.sns = "aws.sns"
+  }
+}
+
+# Load Balance
+resource "aws_lb" "test" {
+  name               = "test-lb-tf"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = ["${module.hidemyoriginass.security-groups}"]
+
+  subnets = ["${data.aws_subnet.selected.*.id}"]
+}
+
+# Output
+output "Module security-group output" {
+  value = "${module.hidemyoriginass.security-groups}"
 }
 ```
