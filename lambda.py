@@ -77,7 +77,6 @@ def lambda_handler(event, context):
     response = urllib2.urlopen(IpSpaceURL)
     json_data = json.loads(response.read())
     new_ip_ranges = [ x['ip_prefix'] for x in json_data['prefixes'] if x['service'] == 'CLOUDFRONT' ]
-    ipsize = len(new_ip_ranges)
 
     if new_ip_ranges > 50:            
         new_ip_ranges_chunked = chunk(new_ip_ranges,len(SG_LIST))
