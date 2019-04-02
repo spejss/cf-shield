@@ -1,6 +1,6 @@
 # IAM ROLE
 resource "aws_iam_role" "iamRoleForLambda" {
-  count = "${var.create_role == "true" ? 1 : 0 }"
+  count = "${var.create_role == "True" ? 1 : 0 }"
   name  = "iamRoleForLambda"
 
   assume_role_policy = <<EOF
@@ -62,23 +62,13 @@ resource "aws_lambda_function" "cfshield-lambdaFunc" {
       sg_shield_1   = "${aws_security_group.cfshield-sgAuto.0.id}"
       sg_shield_2   = "${aws_security_group.cfshield-sgAuto.1.id}"
       REGION_NAME   = "${var.region_name}"
-      slack_url     = "${var.slack_url}"
-      slack_channel = "${var.slack_channel}"
     }
   }
 }
 
 # subscribe sns topic ipspace
 resource "aws_sns_topic_subscription" "cfshield-ipSpaceChanged_Provider" {
-  count     = "${var.region_name != "us-east-1" ? 1 : 0}"
   provider  = "aws.sns"
-  topic_arn = "${var.sns-topic}"
-  protocol  = "lambda"
-  endpoint  = "${aws_lambda_function.cfshield-lambdaFunc.arn}"
-}
-
-resource "aws_sns_topic_subscription" "cfshield-ipSpaceChanged" {
-  count     = "${var.region_name == "us-east-1" ? 1 : 0}"
   topic_arn = "${var.sns-topic}"
   protocol  = "lambda"
   endpoint  = "${aws_lambda_function.cfshield-lambdaFunc.arn}"
